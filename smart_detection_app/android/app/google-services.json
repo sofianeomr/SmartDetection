@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "529341360402",
+    "project_id": "smartdetection-27a0d",
+    "storage_bucket": "smartdetection-27a0d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:529341360402:android:42a59d36d049e3bc666bcb",
+        "android_client_info": {
+          "package_name": "com.example.smart_detection_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyANirWBtOi3xjk4gzXx4wb0qPBRW-epiiM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

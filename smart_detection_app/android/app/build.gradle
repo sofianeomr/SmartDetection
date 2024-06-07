@@ -1,5 +1,8 @@
 plugins {
     id "com.android.application"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services'
+    // END: FlutterFire Configuration
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -23,8 +26,9 @@ if (flutterVersionName == null) {
 }
 
 android {
+
     namespace "com.example.smart_detection_app"
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion 34 // Remplacé flutter.compileSdkVersion par 34
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -64,4 +68,6 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+}
