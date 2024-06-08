@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:smart_detection_app/MqttHandler.dart';
 import 'package:smart_detection_app/firebase_options.dart';
 import 'package:smart_detection_app/push_notification.dart';
@@ -21,9 +22,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData.dark(),
-      home: const MyStatefulWidget(),
+    return ChangeNotifierProvider(
+      create: (context) => MqttHandler(),
+      child: MaterialApp(
+        theme: ThemeData.dark(),
+        home: const MyStatefulWidget(),
+      ),
     );
   }
 }
@@ -36,14 +40,17 @@ class MyStatefulWidget extends StatefulWidget {
 }
 
 class _MyStatefulWidgetState extends State<MyStatefulWidget> with SingleTickerProviderStateMixin {
-  MqttHandler mqttHandler = MqttHandler();
+  late MqttHandler mqttHandler;
   bool isProximityTriggered = false;
   double _leftPosition = 50;
   bool _imageExists = true;
+  bool isRedLightVisible = true;
+  Timer? _blinkTimer;
 
   @override
   void initState() {
     super.initState();
+    mqttHandler = Provider.of<MqttHandler>(context, listen: false);
     mqttHandler.connect();
     mqttHandler.frontSensor.addListener(() => setState(() {}));
     mqttHandler.backSensor.addListener(() => setState(() {}));
@@ -58,7 +65,20 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> with SingleTickerPr
       });
     });
 
+    mqttHandler.frontSensor.addListener(() => _handleSensorChange(mqttHandler.frontSensor.value));
+    mqttHandler.backSensor.addListener(() => _handleSensorChange(mqttHandler.backSensor.value));
+    mqttHandler.leftSensor.addListener(() => _handleSensorChange(mqttHandler.leftSensor.value));
+    mqttHandler.rightSensor.addListener(() => _handleSensorChange(mqttHandler.rightSensor.value));
+
     _checkImageExists();
+  }
+
+  void _handleSensorChange(bool isTriggered) {
+    if (isTriggered) {
+      _startRedLightBlinking();
+    } else {
+      _stopRedLightBlinking();
+    }
   }
 
   void _startProximityAnimation() {
@@ -69,6 +89,22 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> with SingleTickerPr
         });
         _startProximityAnimation();
       }
+    });
+  }
+
+  void _startRedLightBlinking() {
+    _blinkTimer?.cancel();  // Cancel any existing timer
+    _blinkTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      setState(() {
+        isRedLightVisible = !isRedLightVisible;
+      });
+    });
+  }
+
+  void _stopRedLightBlinking() {
+    _blinkTimer?.cancel();
+    setState(() {
+      isRedLightVisible = true;
     });
   }
 
@@ -88,6 +124,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> with SingleTickerPr
 
   @override
   void dispose() {
+    _blinkTimer?.cancel();
     super.dispose();
   }
 
@@ -112,7 +149,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> with SingleTickerPr
           decoration: BoxDecoration(
             shape: BoxShape.rectangle,
             borderRadius: BorderRadius.circular(75),
-            color: isTriggered ? Colors.red.withOpacity(0.5) : Colors.green.withOpacity(0.5),
+            color: isTriggered && isRedLightVisible ? Colors.red.withOpacity(0.5) : Colors.green.withOpacity(0.5),
           ),
         ),
       ),
@@ -123,7 +160,7 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> with SingleTickerPr
     if (!isTriggered) return Container();
 
     return AnimatedPositioned(
-      left:-20,
+      left: -20,
       top: -5,
       duration: const Duration(milliseconds: 300),
       child: _imageExists
@@ -140,32 +177,31 @@ class _MyStatefulWidgetState extends State<MyStatefulWidget> with SingleTickerPr
     );
   }
 
- @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-    appBar: AppBar(
-      title: const Text('Smart Detection App'),
-      backgroundColor: Colors.black,
-    ),
-    body: Center(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox(
-            width: 250,
-            height: 500,
-            child: Image.asset('assets/voiture.png'),
-          ),
-          _buildSensorIndicator(mqttHandler.frontSensor.value, const Offset(50, 0), 150, 80, 'Front Sensor'),
-          _buildSensorIndicator(mqttHandler.backSensor.value, const Offset(50, 420), 150, 80, 'Back Sensor'),
-          _buildSensorIndicator(mqttHandler.leftSensor.value, const Offset(0, 150), 80, 200, 'Left Sensor'),
-          _buildSensorIndicator(mqttHandler.rightSensor.value, const Offset(170, 150), 80, 200, 'Right Sensor'),
-          if (mqttHandler.proximitySensor.value) _buildProximityIndicator(mqttHandler.proximitySensor.value),
-
-        ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      appBar: AppBar(
+        title: const Text('Smart Detection App'),
+        backgroundColor: Colors.black,
       ),
-    ),
-  );
-}
+      body: Center(
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 250,
+              height: 500,
+              child: Image.asset('assets/voiture.png'),
+            ),
+            _buildSensorIndicator(mqttHandler.frontSensor.value, const Offset(50, 0), 150, 80, 'Front Sensor'),
+            _buildSensorIndicator(mqttHandler.backSensor.value, const Offset(50, 420), 150, 80, 'Back Sensor'),
+            _buildSensorIndicator(mqttHandler.leftSensor.value, const Offset(0, 150), 80, 200, 'Left Sensor'),
+            _buildSensorIndicator(mqttHandler.rightSensor.value, const Offset(170, 150), 80, 200, 'Right Sensor'),
+            if (mqttHandler.proximitySensor.value) _buildProximityIndicator(mqttHandler.proximitySensor.value),
+          ],
+        ),
+      ),
+    );
+  }
 }
